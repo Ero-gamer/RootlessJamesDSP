@@ -1,0 +1,50 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches: [ main ]  # Triggers on pushes to main; change to 'master' if your default branch is different
+  pull_request:
+    branches: [ main ]  # Optional: Also builds on PRs to main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetches full history for clean builds
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'  # Eclipse Temurin (OpenJDK)
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Cache Gradle dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: \( {{ runner.os }}-gradle- \){{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3  # Installs Android SDK tools
+
+    - name: Build debug APK
+      run: ./gradlew assembleDebug --stacktrace --info
+      # --stacktrace and --info for detailed logs if build fails
+
+    - name: Upload debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-apk-${{ github.sha }}  # Includes commit SHA for versioning
+        path: app/build/outputs/apk/debug/*.apk
+        retention-days: 30  # Artifacts available for 30 days
